@@ -41,7 +41,7 @@ public class TestEcoli {
 	}
 	
 	private static String getAuthToken() throws Exception {
-		return AuthService.login("nardevuser1", "nardevuser2").getToken().toString();
+		return AuthService.login("nardevuser1", "*****").getToken().toString();
 	}
 	
 	public static void runBlast(String genome1name, String genome2name) throws Exception {
@@ -76,7 +76,7 @@ public class TestEcoli {
 		String genomeId = "Shewanella_ANA_3.genome";
 		long time = System.currentTimeMillis();
 		try {
-			GenomeCmpConfig cfg = new GenomeCmpConfig(1, new File("tmp"), null, null, null);
+			GenomeCmpConfig cfg = new GenomeCmpConfig(new File("tmp"), null, (String)null, null);
 			AnnotateGenome.run(token, 
 					new AnnotateGenomeParams().withInGenomeWs(ws).withInGenomeId(genomeId)
 					.withOutGenomeWs(ws).withOutGenomeId(genomeId).withSeedAnnotationOnly(1L), cfg);

@@ -15,8 +15,8 @@ import java.sql.SQLException;
 import junit.framework.Assert;
 
 import org.easymock.EasyMockSupport;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import us.kbase.common.service.JsonClientException;
@@ -31,9 +31,9 @@ import us.kbase.userandjobstate.Results;
 public class TaskHolderTest extends EasyMockSupport {
 	private static File tmpDir = new File("temp");
 	
-	@Before
-	@After
-	public void dropDatabase() throws Exception {
+	@BeforeClass
+	@AfterClass
+	public static void dropDatabase() throws Exception {
 		if (!tmpDir.exists())
 			tmpDir.mkdir();
 		Class.forName("org.apache.derby.jdbc.EmbeddedDriver");
@@ -82,7 +82,7 @@ public class TaskHolderTest extends EasyMockSupport {
 		    }
 		});
 		replayAll();
-		th[0] = new TaskHolder(new GenomeCmpConfig(1, tmpDir, null, obst, jbst));
+		th[0] = new TaskHolder(new GenomeCmpConfig(tmpDir, null, null, obst, jbst));
 		Assert.assertEquals(jobId, th[0].addTaskForTest(new TestTask("something-saved", null), token));
 		while (!complete[0]) {
 			Thread.sleep(100);
@@ -128,7 +128,7 @@ public class TaskHolderTest extends EasyMockSupport {
 		    }
 		});
 		replayAll();
-		th[0] = new TaskHolder(new GenomeCmpConfig(1, tmpDir, null, obst, jbst));
+		th[0] = new TaskHolder(new GenomeCmpConfig(tmpDir, null, null, obst, jbst));
 		Assert.assertEquals(jobId, th[0].addTaskForTest(new TestTask("something-saved", new Runnable() {
 			@Override
 			public void run() {

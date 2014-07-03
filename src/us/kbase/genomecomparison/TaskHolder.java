@@ -33,8 +33,8 @@ public class TaskHolder {
     public static final String DERBY_DB_NAME = "GenomeCmpDb";
     public static final String QUEUE_TABLE_NAME = "task_queue";
 	
-	public TaskHolder(int threadCount, File tempDir, File blastBin) throws ClassNotFoundException, SQLException {
-		this(new GenomeCmpConfig(threadCount, tempDir, blastBin, null, null));
+	public TaskHolder(File tempDir, File blastBin) throws ClassNotFoundException, SQLException {
+		this(new GenomeCmpConfig(tempDir, blastBin, null, null));
 	}
 	
 	public TaskHolder(GenomeCmpConfig config) throws ClassNotFoundException, SQLException {
@@ -49,7 +49,7 @@ public class TaskHolder {
 					"outref varchar(1000)" +
 					")");
 		}
-		allThreads = new Thread[config.getThreadCount()];
+		allThreads = new Thread[1];
 		for (int i = 0; i < allThreads.length; i++) {
 			allThreads[i] = startNewThread(i);
 		}

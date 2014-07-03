@@ -31,7 +31,6 @@ public class GenomeComparisonServer extends JsonServerServlet {
     
     private TaskHolder getTaskHolder() throws Exception {
     	if (taskHolder == null) {
-    		int threadCount = 1;
     		File tempDir = new File(".");
     		File blastBin = null;
     		if (configPath != null) {
@@ -39,8 +38,6 @@ public class GenomeComparisonServer extends JsonServerServlet {
     			if (f.exists()) {
     				Properties props = new Properties();
     				props.load(new FileInputStream(f));
-    				if (props.containsKey("thread.count"))
-    					threadCount = Integer.parseInt(props.getProperty("thread.count"));
     				if (props.containsKey("temp.dir"))
     					tempDir = new File(props.getProperty("temp.dir"));
     				if (props.containsKey("blast.bin"))
@@ -51,7 +48,7 @@ public class GenomeComparisonServer extends JsonServerServlet {
     		} else {
     			System.out.println("Configuration file was not set");
     		}
-			taskHolder = new TaskHolder(threadCount, tempDir, blastBin);
+			taskHolder = new TaskHolder(tempDir, blastBin);
     	}
     	return taskHolder;
     }

@@ -20,77 +20,85 @@ import us.kbase.workspace.SaveObjectsParams;
 import us.kbase.workspace.WorkspaceClient;
 
 public class GenomeCmpConfig {
-	private int threadCount;
 	private File tempDir;
 	private File blastBin;
+	private String wsUrl; 
 	private ObjectStorage objectStorage;
 	private JobStatuses jobStatuses;
 
-	private String wsUrl = "https://kbase.us/services/ws/";
-    private String jobSrvUrl = "https://kbase.us/services/userandjobstate/";
+	private static final String defaultWsUrl = "https://kbase.us/services/ws/";
+	private static final String defaultJssUrl = "https://kbase.us/services/userandjobstate/";
 
 	public GenomeCmpConfig() {
-		this(1, null, null, null, null);
+		this(null, null, null, null);
+	}
+
+	public GenomeCmpConfig(Map<String, String> cfgMap) {
+		this(asFile(cfgMap.get("temp.dir")), asFile(cfgMap.get("blast.bin")), cfgMap.get("ws.url"), cfgMap.get("jss.url"));
 	}
 	
-	public GenomeCmpConfig(int threadCount, File tempDir, File blastBin, ObjectStorage objectStorage, JobStatuses jobStatuses) {
-		this.threadCount = threadCount;
-		this.tempDir = tempDir;
-		this.blastBin = blastBin;
-		this.objectStorage = objectStorage != null ? objectStorage : new ObjectStorage() {
+	public GenomeCmpConfig(File tempDir, File blastBin, final String wsUrl, final String jssUrl) {
+		this(tempDir, blastBin, wsUrl, new ObjectStorage() {
 			@Override
 			public List<ObjectData> getObjects(String token, List<ObjectIdentity> objectIds) throws Exception {
-				return createWsClient(token).getObjects(objectIds);
+				return createWsClient(getNotNull(wsUrl, defaultWsUrl), token).getObjects(objectIds);
 			}
 			@Override
 			public List<Tuple11<Long, String, String, String, Long, String, Long, String, String, Long, Map<String, String>>> saveObjects(
 					String token, SaveObjectsParams params) throws Exception {
-				return createWsClient(token).saveObjects(params);
+				return createWsClient(getNotNull(wsUrl, defaultWsUrl), token).saveObjects(params);
 			}
-		};
-		this.jobStatuses = jobStatuses != null ? jobStatuses : new JobStatuses() {
+		}, new JobStatuses() {
 			@Override
 			public String createAndStartJob(String token, String status, String desc,
 					InitProgress progress, String estComplete) throws IOException, JsonClientException {
-				return createJobClient(token).createAndStartJob(token, status, desc, progress, estComplete);
+				return createJobClient(getNotNull(jssUrl, defaultJssUrl), token).createAndStartJob(token, status, desc, progress, estComplete);
 			}
 			@Override
 			public void updateJob(String job, String token, String status, String estComplete) throws IOException, JsonClientException {
-				createJobClient(token).updateJob(job, token, status, estComplete);
+				createJobClient(getNotNull(jssUrl, defaultJssUrl), token).updateJob(job, token, status, estComplete);
 			}
 			@Override
 			public void completeJob(String job, String token, String status,
 					String error, Results res) throws IOException, JsonClientException {
-				createJobClient(token).completeJob(job, token, status, error, res);
+				createJobClient(getNotNull(jssUrl, defaultJssUrl), token).completeJob(job, token, status, error, res);
 			}
-		};
+		});
 	}
 	
-	public String getWsUrl() {
-		return wsUrl;
+	public GenomeCmpConfig(File tempDir, File blastBin, String wsUrl, ObjectStorage objectStorage, JobStatuses jobStatuses) {
+		this.tempDir = tempDir;
+		this.blastBin = blastBin;
+		this.wsUrl = getNotNull(wsUrl, defaultWsUrl);
+		this.objectStorage = objectStorage;
+		this.jobStatuses = jobStatuses;
+	}
+		
+	private static String getNotNull(String val, String defVal) { 
+		return val == null ? defVal : val;
 	}
 	
-	public void setWsUrl(String wsUrl) {
-		this.wsUrl = wsUrl;
+	private static File asFile(String path) {
+		return path == null ? null : new File(path);
+	}
+
+	public static WorkspaceClient createWsClient(String token) throws Exception {
+		return createWsClient(defaultWsUrl, token);
 	}
 	
-	public String getJobSrvUrl() {
-		return jobSrvUrl;
-	}
-	
-	public void setJobSrvUrl(String jobSrvUrl) {
-		this.jobSrvUrl = jobSrvUrl;
-	}
-	
-	public WorkspaceClient createWsClient(String token) throws Exception {
+	public static WorkspaceClient createWsClient(String wsUrl, String token) throws Exception {
 		WorkspaceClient ret = new WorkspaceClient(new URL(wsUrl), new AuthToken(token));
 		ret.setAuthAllowedForHttp(true);
 		return ret;
 	}
 
-	public UserAndJobStateClient createJobClient(String token) throws IOException, JsonClientException {
+	public static UserAndJobStateClient createJobClient(String token) throws IOException, JsonClientException {
+		return createJobClient(defaultJssUrl, token);
+	}
+
+	public static UserAndJobStateClient createJobClient(String jssUrl, String token) throws IOException, JsonClientException {
 		try {
-			UserAndJobStateClient ret = new UserAndJobStateClient(new URL(jobSrvUrl), new AuthToken(token));
+			UserAndJobStateClient ret = new UserAndJobStateClient(new URL(jssUrl), new AuthToken(token));
 			ret.setAuthAllowedForHttp(true);
 			return ret;
 		} catch (TokenFormatException e) {
@@ -100,16 +108,16 @@ public class GenomeCmpConfig {
 		}
 	}
 
-	public int getThreadCount() {
-		return threadCount;
-	}
-	
 	public File getTempDir() {
 		return tempDir;
 	}
 	
 	public File getBlastBin() {
 		return blastBin;
+	}
+	
+	public String getWsUrl() {
+		return wsUrl;
 	}
 	
 	public ObjectStorage getObjectStorage() {

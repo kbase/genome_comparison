@@ -32,25 +32,34 @@ public class DbConn {
 	
 	public <T> List<T> collect(String sql, SqlLoader<T> sl, Object... params) throws SQLException {
         PreparedStatement st = getConnection().prepareStatement(sql);
-        for (int i = 0; i < params.length; i++)
-            st.setObject(1 + i, params[i]);
-        ResultSet rs = st.executeQuery();
-        List<T> ret = new ArrayList<T>();
-        while (rs.next()) {
-            ret.add(sl.collectRow(rs));
+        try {
+        	for (int i = 0; i < params.length; i++)
+        		st.setObject(1 + i, params[i]);
+        	return collect(st.executeQuery(), sl);
+        } finally {
+        	st.close();
         }
-        rs.close();
-        st.close();
-        return ret;
-    }
+	}
+		
+	public <T> List<T> collect(ResultSet rs, SqlLoader<T> sl) throws SQLException {
+		try {
+			List<T> ret = new ArrayList<T>();
+			while (rs.next())
+				ret.add(sl.collectRow(rs));
+			return ret;
+		} finally {
+			rs.close();
+		}
+	}
 	
 	public boolean checkTable(String tableName) throws SQLException {
         Set<String> tables = new HashSet<String>(collect(
-        		"select * from SYS.SYSTABLES where tabletype='T'", new SqlLoader<String>() {
-            public String collectRow(ResultSet rs) throws SQLException {
-            	return rs.getString("tablename").toUpperCase();
-            }
-        }));
+        		conn.getMetaData().getTables(null, null, "%", new String[] {"TABLE"}), 
+        		new SqlLoader<String>() {
+        			public String collectRow(ResultSet rs) throws SQLException {
+        				return rs.getString("TABLE_NAME").toUpperCase();
+        			}
+        		}));
         return tables.contains(tableName.toUpperCase());
     }
 
