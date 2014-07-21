@@ -6,7 +6,7 @@ CURR_DIR = $(shell pwd)
 SERVICE_NAME = $(shell basename $(CURR_DIR))
 SERVICE_DIR = $(TARGET)/services/$(SERVICE_NAME)
 LIB_JARS_DIR = $(KB_TOP)/modules/jars/lib/jars
-TARGET_PORT = 8283
+TARGET_PORT = 7123
 THREADPOOL_SIZE = 8
 
 default: compile
@@ -38,10 +38,10 @@ deploy-service:
 	cp -f ./dist/service.war $(SERVICE_DIR)
 	cp -f ./glassfish_start_service.sh $(SERVICE_DIR)
 	cp -f ./glassfish_stop_service.sh $(SERVICE_DIR)
-	echo "./glassfish_start_service.sh $(SERVICE_DIR)/service.war $(TARGET_PORT) $(THREADPOOL_SIZE)" > $(SERVICE_DIR)/start_service.sh
-	chmod +x $(SERVICE_DIR)/start_service.sh
-	echo "./glassfish_stop_service.sh $(TARGET_PORT)" > $(SERVICE_DIR)/stop_service.sh
-	chmod +x $(SERVICE_DIR)/stop_service.sh
+	echo "./glassfish_start_service.sh $(SERVICE_DIR)/service.war $(TARGET_PORT) $(THREADPOOL_SIZE)" > $(SERVICE_DIR)/start_service
+	chmod +x $(SERVICE_DIR)/start_service
+	echo "./glassfish_stop_service.sh $(TARGET_PORT)" > $(SERVICE_DIR)/stop_service
+	chmod +x $(SERVICE_DIR)/stop_service
 	./create_config.sh $(SERVICE_DIR) $(THREADPOOL_SIZE)
 
 deploy-scripts:
