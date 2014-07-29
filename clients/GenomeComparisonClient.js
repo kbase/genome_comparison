@@ -40,6 +40,26 @@ function GenomeComparison(url, auth, auth_cb) {
         deprecationWarning();
         return json_call_ajax("GenomeComparison.annotate_genome", [input], 1, _callback, _error_callback);
     };
+
+    this.get_ncbi_genome_names = function (_callback, _errorCallback) {
+    return json_call_ajax("GenomeComparison.get_ncbi_genome_names",
+        [], 1, _callback, _errorCallback);
+};
+
+    this.get_ncbi_genome_names_async = function (_callback, _error_callback) {
+        deprecationWarning();
+        return json_call_ajax("GenomeComparison.get_ncbi_genome_names", [], 1, _callback, _error_callback);
+    };
+
+    this.import_ncbi_genome = function (input, _callback, _errorCallback) {
+    return json_call_ajax("GenomeComparison.import_ncbi_genome",
+        [input], 0, _callback, _errorCallback);
+};
+
+    this.import_ncbi_genome_async = function (input, _callback, _error_callback) {
+        deprecationWarning();
+        return json_call_ajax("GenomeComparison.import_ncbi_genome", [input], 0, _callback, _error_callback);
+    };
  
 
     /*
