@@ -28,6 +28,7 @@ mkdir $LIB_DIR
 
 javac -sourcepath $SRC_DIR $CLASSPATH -d $CLASSES_DIR -g $SRC_DIR/us/kbase/genomecomparison/*.java
 cp -r $SRC_DIR/us/kbase/genomecomparison/gbk/qualifier_types.properties $CLASSES_DIR/us/kbase/genomecomparison/gbk/
+cp -r $SRC_DIR/us/kbase/genomecomparison/genome2ftp.properties $CLASSES_DIR/us/kbase/genomecomparison/
 
 arr=$(echo $JARS | tr ":" "\n")
 for x in $arr
