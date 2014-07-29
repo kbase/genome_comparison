@@ -63,6 +63,8 @@ public class GenomeCmpConfig {
 		File f = new File(configPath);
 		if (f.exists()) {
 			Map<String, String> props = new Ini(new File(configPath)).get("genome_comparison");
+			if (props == null)
+				System.out.println("Can not load properties from configuration file: " + configPath);
 			if (props.containsKey("thread.count"))
 				threadCount = Integer.parseInt(props.get("thread.count"));
 			if (props.containsKey("temp.dir"))

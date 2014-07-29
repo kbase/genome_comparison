@@ -1,18 +1,21 @@
 package us.kbase.genomecomparison;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -26,18 +29,13 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
-import us.kbase.common.service.Tuple3;
-import us.kbase.common.service.Tuple4;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import us.kbase.common.service.UObject;
-import us.kbase.genomecomparison.gbk.GbkCallback;
-import us.kbase.genomecomparison.gbk.GbkLocation;
-import us.kbase.genomecomparison.gbk.GbkParser;
-import us.kbase.genomecomparison.gbk.GbkQualifier;
-import us.kbase.genomecomparison.gbk.GbkSubheader;
+import us.kbase.genomecomparison.gbk.GbkUploader;
 import us.kbase.kbasegenomes.Contig;
 import us.kbase.kbasegenomes.ContigSet;
-import us.kbase.kbasegenomes.Feature;
-import us.kbase.kbasegenomes.Genome;
 import us.kbase.workspace.ObjectSaveData;
 import us.kbase.workspace.SaveObjectsParams;
 import us.kbase.workspace.WorkspaceClient;
@@ -45,14 +43,21 @@ import us.kbase.workspace.WorkspaceClient;
 public class ContigSetUploadServlet extends HttpServlet {
 	private static final long serialVersionUID = -1L;
 	
-    private File tempDir = null;
+    private static File tempDir = null;
+    private static String wsUrl = null;
 
-    private File getTempDir() throws IOException {
+    private static File getTempDir() throws IOException {
 		if (tempDir == null)
 			tempDir = GenomeCmpConfig.loadConfig().getTempDir();
 		return tempDir;
     }
-    
+
+    private static String getWsUrl() throws IOException {
+		if (wsUrl == null)
+			wsUrl = GenomeCmpConfig.loadConfig().getWsUrl();
+		return wsUrl;
+    }
+
 	@Override
 	protected void doOptions(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
@@ -76,6 +81,7 @@ public class ContigSetUploadServlet extends HttpServlet {
 		DiskFileItemFactory factory = new DiskFileItemFactory(maxMemoryFileSize, dir);
 		ServletFileUpload upload = new ServletFileUpload(factory);
 		FileItem file = null;
+		List<File> tempFiles = new ArrayList<File>();
 		try {
 			Stat.addUploader(dir);
 			String token = null;
@@ -137,7 +143,39 @@ public class ContigSetUploadServlet extends HttpServlet {
 				wc.saveObjects(new SaveObjectsParams().withWorkspace(ws).withObjects(Arrays.asList(data)));
 				response.getOutputStream().write("Contig Set was successfuly uploaded".getBytes());
 			} else if (type.equals("genomegbk")) {
-				uploadGbk(file.getInputStream(), ws, id, token);
+				String wsUrl = getWsUrl();
+				if (file.getName().endsWith(".zip")) {
+					ZipInputStream zis = new ZipInputStream(file.getInputStream());
+					while (true) {
+						ZipEntry ze = zis.getNextEntry();
+						if (ze == null)
+							break;
+						File tempFile = File.createTempFile(id, ".gbk", dir);
+						tempFiles.add(tempFile);
+						OutputStream os = new FileOutputStream(tempFile);
+						Utils.copy(zis, os);
+						os.close();
+						zis.closeEntry();
+					}
+					zis.close();
+					GbkUploader.uploadGbk(tempFiles, wsUrl, ws, id, token);
+				} else if (file.getName().endsWith(".tar.gz") || file.getName().endsWith(".tgz")) {
+					throw new ServletException("Tar files are not supported, please use zip instead.");
+				} else if (file.getName().endsWith(".gz")) {
+					File tempFile = File.createTempFile(id, ".gbk", dir);
+					tempFiles.add(tempFile);
+					GZIPInputStream is = new GZIPInputStream(file.getInputStream());
+					OutputStream os = new FileOutputStream(tempFile);
+					Utils.copy(is, os);
+					os.close();
+					is.close();
+					GbkUploader.uploadGbk(Arrays.asList(tempFile), wsUrl, ws, id, token);
+				} else {
+					File tempFile = File.createTempFile(id, ".gbk", dir);
+					tempFiles.add(tempFile);
+					file.write(tempFile);
+					GbkUploader.uploadGbk(Arrays.asList(tempFile), wsUrl, ws, id, token);
+				}
 				setupResponseHeaders(request, response);
 				response.getOutputStream().write("Genome was successfuly uploaded".getBytes());
 			} else {
@@ -150,128 +188,48 @@ public class ContigSetUploadServlet extends HttpServlet {
 			Stat.delUploader(dir);
 			if (file != null)
 				file.delete();
+			for (File f : tempFiles)
+				if (f.exists())
+					f.delete();
 		}
 	}
-	
-	public static void uploadGbk(InputStream is, String ws, String id, String token) throws Exception {
-		BufferedReader br = new BufferedReader(new InputStreamReader(is));
-		final Map<String, Contig> contigMap = new LinkedHashMap<String, Contig>();
-		final Genome genome = new Genome()
-				.withComplete(1L).withDomain("Bacteria").withGeneticCode(11L).withId(id)
-				.withNumContigs(1L).withSource("NCBI").withSourceId("NCBI");
-		final List<Feature> features = new ArrayList<Feature>();
-		GbkParser.parse(br, new GbkCallback() {
-			@Override
-			public void setGenome(String genomeName, int taxId) throws Exception {
-				genome.withScientificName(genomeName);
-				if (genome.getTaxonomy() == null)
-					genome.withTaxonomy("Taxonomy ID: " + taxId);
-			}
-			@Override
-			public void addSeqPart(String contigName, int seqPartIndex, String seqPart,
-					int commonLen) throws Exception {
-				Contig contig = contigMap.get(contigName);
-				if (contig == null) {
-					contig = new Contig().withId(contigName).withName(contigName).withMd5("md5")
-							.withSequence("");
-					contigMap.put(contigName, contig);
-				}
-				contig.withSequence(contig.getSequence() + seqPart);
-			}
-			@Override
-			public void addHeader(String contigName, String headerType, String value,
-					List<GbkSubheader> items) throws Exception {
-				if (headerType.equals("SOURCE")) {
-					String genomeName = value;
-					genome.withScientificName(genomeName);
-					for (GbkSubheader sub : items) {
-						if (sub.type.equals("ORGANISM")) {
-							String taxPath = sub.getValue();
-							if (taxPath.endsWith("."))
-								taxPath = taxPath.substring(0, taxPath.length() - 1).trim();
-							genome.withTaxonomy(taxPath + "; " + genomeName);
-						}
-					}
-				}
-			}
-			@Override
-			public void addFeature(String contigName, String featureType, int strand,
-					int start, int stop, List<GbkLocation> locations,
-					List<GbkQualifier> props) throws Exception {
-				Feature f = null;
-				if (featureType.equals("CDS")) {
-					 f = new Feature().withType("CDS");
-				} else if (featureType.toUpperCase().endsWith("RNA")) {
-					 f = new Feature().withType("rna");
-				}
-				if (f == null)
-					return;
-				List<Tuple4<String, Long, String, Long>> locList = new ArrayList<Tuple4<String, Long, String, Long>>();
-				for (GbkLocation loc : locations) {
-					long realStart = loc.strand > 0 ? loc.start : loc.stop;
-					String dir = loc.strand > 0 ? "+" : "-";
-					long len = loc.stop + 1 - loc.start;
-					locList.add(new Tuple4<String, Long, String, Long>().withE1(contigName)
-							.withE2(realStart).withE3(dir).withE4(len));
-				}
-				f.withLocation(locList).withAnnotations(new ArrayList<Tuple3<String, String, Long>>());
-				f.withAliases(new ArrayList<String>());
-				for (GbkQualifier prop : props) {
-					if (prop.type.equals("locus_tag")) {
-						f.setId(prop.getValue());
-					} else if (prop.type.equals("translation")) {
-						String seq = prop.getValue();
-						f.withProteinTranslation(seq).withProteinTranslationLength((long)seq.length());
-					} else if (prop.type.equals("note")) {
-						f.setFunction(prop.getValue());
-					} else if (prop.type.equals("product")) {
-						if (f.getFunction() == null)
-							f.setFunction(prop.getValue());
-					} else if (prop.type.equals("gene")) {
-						if (f.getId() == null)
-							f.setId(prop.getValue());
-						f.getAliases().add(prop.getValue());
-					} else if (prop.type.equals("protein_id")) {
-						f.getAliases().add(prop.getValue());
-					}
-				}
-				features.add(f);
-			}
-		});
-		if (contigMap.size() == 0) {
-			throw new ServletException("GBK-file has no DNA-sequence");
-		}
-		WorkspaceClient wc = GenomeCmpConfig.createWsClient(token);
-		String contigId = id + ".contigset";
-		List<Long> contigLengths = new ArrayList<Long>();
-		long dnaLen = 0;
-		for (Contig contig : contigMap.values()) {
-			if (contig.getSequence() == null || contig.getSequence().length() == 0) {
-				throw new ServletException("Contig " + contig.getId() + " has no DNA-sequence");
-			}
-			contig.withLength((long)contig.getSequence().length());
-			contigLengths.add(contig.getLength());
-			dnaLen += contig.getLength();
-		}
-		ContigSet contigSet = new ContigSet().withContigs(new ArrayList<Contig>(contigMap.values()))
-				.withId(id).withMd5("md5").withName(id)
-				.withSource("User uploaded data").withSourceId("USER").withType("Organism");
-		wc.saveObjects(new SaveObjectsParams().withWorkspace(ws)
-				.withObjects(Arrays.asList(new ObjectSaveData().withName(contigId)
-						.withType("KBaseGenomes.ContigSet").withData(new UObject(contigSet)))));
-		genome.withContigIds(new ArrayList<String>(contigMap.keySet())).withContigLengths(contigLengths)
-				.withDnaSize(dnaLen).withContigsetRef(ws + "/" + contigId).withFeatures(features)
-				.withGcContent(AnnotateGenome.calculateGcContent(contigSet));
-		Map<String, String> meta = new LinkedHashMap<String, String>();
-		meta.put("Scientific name", genome.getScientificName());
-		wc.saveObjects(new SaveObjectsParams().withWorkspace(ws)
-				.withObjects(Arrays.asList(new ObjectSaveData().withName(id).withMeta(meta)
-						.withType("KBaseGenomes.Genome").withData(new UObject(genome)))));
-	}
-	
+		
 	private static void check(Object obj, String param) throws ServletException {
 		if (obj == null)
 			throw new ServletException("Parameter " + param + " wasn't defined");
+	}
+
+	private static Map<String, List<String>> loadGenomeToPaths() throws Exception {
+		InputStream is = ContigSetUploadServlet.class.getResourceAsStream("genome2ftp.properties");
+		return new ObjectMapper().readValue(is, new TypeReference<Map<String, List<String>>>() {});
+	}
+	
+	public static List<String> getNcbiGenomeNames() throws Exception {
+		return new ArrayList<String>(loadGenomeToPaths().keySet());
+	}
+	
+	public static void importNcbiGenome(String genomeName, String ws, String id, String token) throws Exception {
+	    List<String> paths = loadGenomeToPaths().get(genomeName);
+	    if (paths == null)
+	    	throw new IllegalStateException("NCBI genome name is not found: " + genomeName);
+	    File dir = getTempDir();
+	    List<File> files = new ArrayList<File>();
+	    try {
+	    	for (String path : paths) {
+	    		InputStream is = new URL("ftp://ftp.ncbi.nih.gov/genomes/Bacteria/" + path).openStream();
+	    		File tempFile = File.createTempFile("ncbi_", ".gbk", dir);
+	    		files.add(tempFile);
+	    		OutputStream os = new FileOutputStream(tempFile);
+	    		Utils.copy(is, os);
+	    		os.close();
+	    		is.close();
+	    	}
+			GbkUploader.uploadGbk(files, getWsUrl(), ws, id, token);
+	    } finally {
+	    	for (File f : files)
+	    		if (f.exists())
+	    			f.delete();
+	    }
 	}
 	
 	public static void main(String[] args) throws Exception {

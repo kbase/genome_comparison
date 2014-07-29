@@ -8,7 +8,7 @@ fi
 
 CURRENT_DIR="$(pwd)"
 SRC_DIR=./src
-JARS=$1/kbase/auth/kbase-auth-1380919426-d35c17d.jar:$1/servlet/servlet-api-2.5.jar:$1/jackson/jackson-annotations-2.2.3.jar:$1/jackson/jackson-core-2.2.3.jar:$1/jackson/jackson-databind-2.2.3.jar:$1/jetty/jetty-all-7.0.0.jar:$1/syslog4j/syslog4j-0.9.46.jar:$1/ini4j/ini4j-0.5.2.jar:$1/apache_commons/commons-io-2.4.jar:$1/apache_commons/commons-fileupload-1.2.2.jar:$1/derby/derby-10.10.1.1.jar:$1/junit/junit-4.9.jar:$1/easymock/easymock-3.2.jar:$1/kbase/common/kbase-common-0.0.3.jar
+JARS=$1/kbase/auth/kbase-auth-1398468950-3552bb2.jar:$1/servlet/servlet-api-2.5.jar:$1/jackson/jackson-annotations-2.2.3.jar:$1/jackson/jackson-core-2.2.3.jar:$1/jackson/jackson-databind-2.2.3.jar:$1/jetty/jetty-all-7.0.0.jar:$1/syslog4j/syslog4j-0.9.46.jar:$1/ini4j/ini4j-0.5.2.jar:$1/apache_commons/commons-io-2.4.jar:$1/apache_commons/commons-fileupload-1.2.2.jar:$1/derby/derby-10.10.1.1.jar:$1/junit/junit-4.9.jar:$1/easymock/easymock-3.2.jar:$1/kbase/common/kbase-common-0.0.3.jar
 CLASSPATH="-classpath $JARS"
 CLASSES_DIR=./classes
 

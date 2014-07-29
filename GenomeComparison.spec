@@ -91,4 +91,14 @@ module GenomeComparison {
 	} annotate_genome_params;
 	
 	funcdef annotate_genome(annotate_genome_params input) returns (string job_id) authentication required;
+
+	funcdef get_ncbi_genome_names() returns (list<string>);
+
+	typedef structure {
+		string genome_name;
+		string out_genome_ws;
+		string out_genome_id;
+	} import_ncbi_genome_params;
+
+	funcdef import_ncbi_genome(import_ncbi_genome_params input) returns () authentication required;
 };

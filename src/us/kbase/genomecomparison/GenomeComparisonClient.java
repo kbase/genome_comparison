@@ -154,4 +154,34 @@ public class GenomeComparisonClient {
         List<String> res = caller.jsonrpcCall("GenomeComparison.annotate_genome", args, retType, true, true);
         return res.get(0);
     }
+
+    /**
+     * <p>Original spec-file function name: get_ncbi_genome_names</p>
+     * <pre>
+     * </pre>
+     * @return   instance of list of String
+     * @throws IOException if an IO exception occurs
+     * @throws JsonClientException if a JSON RPC exception occurs
+     */
+    public List<String> getNcbiGenomeNames() throws IOException, JsonClientException {
+        List<Object> args = new ArrayList<Object>();
+        TypeReference<List<List<String>>> retType = new TypeReference<List<List<String>>>() {};
+        List<List<String>> res = caller.jsonrpcCall("GenomeComparison.get_ncbi_genome_names", args, retType, true, false);
+        return res.get(0);
+    }
+
+    /**
+     * <p>Original spec-file function name: import_ncbi_genome</p>
+     * <pre>
+     * </pre>
+     * @param   input   instance of type {@link us.kbase.genomecomparison.ImportNcbiGenomeParams ImportNcbiGenomeParams} (original type "import_ncbi_genome_params")
+     * @throws IOException if an IO exception occurs
+     * @throws JsonClientException if a JSON RPC exception occurs
+     */
+    public void importNcbiGenome(ImportNcbiGenomeParams input) throws IOException, JsonClientException {
+        List<Object> args = new ArrayList<Object>();
+        args.add(input);
+        TypeReference<Object> retType = new TypeReference<Object>() {};
+        caller.jsonrpcCall("GenomeComparison.import_ncbi_genome", args, retType, false, true);
+    }
 }

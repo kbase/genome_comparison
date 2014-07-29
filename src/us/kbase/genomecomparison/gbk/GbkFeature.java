@@ -20,7 +20,7 @@ public class GbkFeature extends GbkLocation {
 		this.locations = new ArrayList<GbkLocation>();
 	}
 	
-	public void close() {
+	public void close(GbkParsingParams params) {
 		String val = value.toString();
 		int str = 1;
 		if((val.startsWith("complement("))&&(val.endsWith(")"))) {
@@ -73,12 +73,14 @@ public class GbkFeature extends GbkLocation {
 		}
 		if(error != null) {
             wasError = true;
-            System.err.println("Error parsing location for feataure [" + type + "] on line " + line_num + ": " + error);
+            if (!params.isIgnoreWrongFeatureLocation())
+            	System.err.println("Error parsing location for feataure [" + type + "] on line " + line_num + ": " + error);
             return;
         }
         if (locations.size()==0) {
             wasError = true;
-            System.err.println("Error detecting location for feataure [" + type + "] on line " + line_num);
+            if (!params.isIgnoreWrongFeatureLocation())
+            	System.err.println("Error detecting location for feataure [" + type + "] on line " + line_num);
             return;
         }
         this.strand = str;
@@ -92,6 +94,7 @@ public class GbkFeature extends GbkLocation {
         if(type.equals("source")) {
             String genomeName = null;
             int taxId = -1;
+            String plasmid = null;
             for (GbkQualifier qualifier : qualifiers) {
                 if (qualifier.type.equals("organism")) {
                     genomeName = qualifier.getValue();
@@ -100,9 +103,11 @@ public class GbkFeature extends GbkLocation {
                     if (value.startsWith(TAXON_PREFIX)) {
                         taxId = Integer.parseInt(value.substring(TAXON_PREFIX.length()).trim());
                     }
+                } else if (qualifier.type.equals("plasmid")) {
+                	plasmid = qualifier.getValue();
                 }
             }
-            ret.setGenome(genomeName, taxId);
+            ret.setGenome(locus.name, genomeName, taxId, plasmid);
         } else {
         	ret.addFeature(locus.name, type, strand, start, stop, locations, qualifiers);
         }

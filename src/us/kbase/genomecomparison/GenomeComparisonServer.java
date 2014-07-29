@@ -1,5 +1,6 @@
 package us.kbase.genomecomparison;
 
+import java.util.List;
 import us.kbase.auth.AuthToken;
 import us.kbase.common.service.JsonServerMethod;
 import us.kbase.common.service.JsonServerServlet;
@@ -72,6 +73,34 @@ public class GenomeComparisonServer extends JsonServerServlet {
     	returnVal = getTaskHolder().addTask(input, authPart.toString());
         //END annotate_genome
         return returnVal;
+    }
+
+    /**
+     * <p>Original spec-file function name: get_ncbi_genome_names</p>
+     * <pre>
+     * </pre>
+     * @return   instance of list of String
+     */
+    @JsonServerMethod(rpc = "GenomeComparison.get_ncbi_genome_names")
+    public List<String> getNcbiGenomeNames() throws Exception {
+        List<String> returnVal = null;
+        //BEGIN get_ncbi_genome_names
+        returnVal = ContigSetUploadServlet.getNcbiGenomeNames();
+        //END get_ncbi_genome_names
+        return returnVal;
+    }
+
+    /**
+     * <p>Original spec-file function name: import_ncbi_genome</p>
+     * <pre>
+     * </pre>
+     * @param   input   instance of type {@link us.kbase.genomecomparison.ImportNcbiGenomeParams ImportNcbiGenomeParams} (original type "import_ncbi_genome_params")
+     */
+    @JsonServerMethod(rpc = "GenomeComparison.import_ncbi_genome")
+    public void importNcbiGenome(ImportNcbiGenomeParams input, AuthToken authPart) throws Exception {
+        //BEGIN import_ncbi_genome
+    	ContigSetUploadServlet.importNcbiGenome(input.getGenomeName(), input.getOutGenomeWs(), input.getOutGenomeId(), authPart.toString());
+        //END import_ncbi_genome
     }
 
     public static void main(String[] args) throws Exception {

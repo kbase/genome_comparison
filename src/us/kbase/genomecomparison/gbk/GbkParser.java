@@ -10,11 +10,9 @@ public class GbkParser {
 	public static final int HEADER_PREFIX_LENGTH = 12;
 	public static final int FEATURE_PREFIX_LENGTH = 21;
 	
-	/**
-	 * Разбор отдельного файла.
-	 */
-	public static void parse(BufferedReader br, GbkCallback ret) throws Exception {
+	public static void parse(BufferedReader br, GbkParsingParams params, GbkCallback ret) throws Exception {
         TypeManager qual_tm = new TypeManager("qualifier_types.properties");
+		String SUBHEADER_ORGANISM_TYPE = "ORGANISM";
 		String QUALIFIER_DB_XREF_TYPE = "db_xref";
 		String QUALIFIER_TRANSLATION_TYPE = "translation";
 		int state = 0;
@@ -55,19 +53,20 @@ public class GbkParser {
 						if(prefix.startsWith(" ")) {
 							sub = new GbkSubheader(line_num,prefix.trim(),line);
 							head.subheaders.add(sub);
-						}
-						else {
+						} else {
 							String type = prefix.trim();
 							head = new GbkHeader(line_num,type,line);
 							sub = null;
 							loc.addHeader(head);
 						}
-					}
-					else {
+					} else {
 						if(sub!=null) {
-							sub.appendValue(line);
-						}
-						else {
+							if (sub.type.equals(SUBHEADER_ORGANISM_TYPE)) {
+								sub.appendValueWithoutSpace("\n" + line);
+							} else {
+								sub.appendValue(line);
+							}
+						} else {
 							head.appendValue(line);
 						}
 					}
@@ -77,7 +76,7 @@ public class GbkParser {
 						state = 2;
 						if(qual!=null) qual.close();
 						qual = null;
-						if(feat!=null) feat.close();
+						if(feat!=null) feat.close(params);
 						feat = null;
 						if(!loc.isClosed()) {
 							loc.close();
@@ -91,7 +90,7 @@ public class GbkParser {
 					line = line.substring(FEATURE_PREFIX_LENGTH).trim();
 					if(prefix.length()>0) {
 						if(feat!=null) {
-							feat.close();
+							feat.close(params);
 						}
 						feat = new GbkFeature(line_num,prefix,line);
 						if(qual!=null) qual.close();
@@ -164,10 +163,10 @@ public class GbkParser {
     public static void main(String[] args) throws Exception {
     	final PrintWriter pw = new PrintWriter("test/parse.txt");
         BufferedReader br = new BufferedReader(new FileReader(new File("test/Pseudomonas_stutzeri_DSM_10701.gb")));
-        parse(br, new GbkCallback() {
+        parse(br, new GbkParsingParams(false), new GbkCallback() {
             @Override
-            public void setGenome(String genomeName, int taxId) throws Exception {
-                pw.println("setGenome: genomeName=" + genomeName + ", taxId=" + taxId);
+            public void setGenome(String contigName, String genomeName, int taxId, String plasmid) throws Exception {
+                pw.println("setGenome: contigName=" + contigName + ", genomeName=" + genomeName + ", taxId=" + taxId + ", plasmid=" + plasmid);
             }
 
             @Override
