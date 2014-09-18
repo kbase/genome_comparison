@@ -1,5 +1,9 @@
 #!/bin/bash
 
+###########################################################################
+### This file will be substituted by ant build.xml file in nearest future.
+###########################################################################
+
 if (( $# != 2 ))
 then
     echo "Usage: make_war <service_dir> <lib_jars_dir>"
