@@ -142,8 +142,11 @@ public class BlastProteomes {
 
 	private static Map<String, String> featuresToProtMap(List<InnerFeature> features) {
 		Map<String, String> ret = new LinkedHashMap<String, String>();
-		for (InnerFeature inf : features)
+		for (InnerFeature inf : features) {
+			if (inf.seq == null || inf.seq.trim().isEmpty())
+				continue;
 			ret.put(inf.protName, inf.seq);
+		}
 		return ret;
 	}
 	
@@ -176,6 +179,11 @@ public class BlastProteomes {
 			InnerFeature inf = new InnerFeature();
 			inf.protName = feature.getId();
 			inf.seq = feature.getProteinTranslation();
+			if (inf.seq == null)
+				continue;
+			inf.seq = inf.seq.trim();
+			if (inf.seq.isEmpty())
+				continue;
 			Tuple4<String, Long, String, Long> location = feature.getLocation().get(0);
 			inf.contigName = location.getE1();
 			int realStart = (int)(long)location.getE2();
