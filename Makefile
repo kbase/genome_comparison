@@ -30,7 +30,9 @@ compile: src
 	./make_war.sh $(SERVICE_DIR) $(LIB_JARS_DIR)
 
 deploy-client:
-	@echo "No deployment for client"
+	mkdir -p $(TARGET)/lib
+	cp ./clients/GenomeComparisonClient.pm $(TARGET)/lib/.
+	echo "deployed clients of $(SERVICE)."
 
 deploy-service:
 	@echo "Service folder: $(SERVICE_DIR)"
